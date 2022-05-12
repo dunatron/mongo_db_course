@@ -182,3 +182,184 @@ db.zips.find({"state": "NY", "city": "ALBANY"}).pretty()
 ## Inserting New Documents - ObjectId
 
 If you want to read more about the ObjectId data type, and the ObjectId() function, which generates ObjectId values, [check out this excellent documentation page](https://www.mongodb.com/docs/manual/reference/method/ObjectId/#objectid).
+
+# Chapter 4: Advanced CRUD Operations
+
+## Query Operators - Comparison
+
+Update Operators  
+Example: `$inc`, `$set`, `$unset`  
+Enable us to modify data in the database
+
+Query Operators  
+Provide additional ways to locate data within the database
+
+`$` has multiple uses  
+Precedes MQL operators  
+Precedes Aggregation pipeline stages  
+Allows access to Field Values
+
+Comparison operators  
+`$eq` = `EQ`ual to  
+`$ne` = `N`ot `E`qual to  
+`$gt` > `G`reater `T`han  
+`$lt` < `L`ess `Than`  
+`$gte` >= `G`reater `T`han or `E`qual to  
+`$lte` <= `L`ess `T`han or `E`qual to
+
+Find all documents where the tripduration was less than or equal to 70 seconds and the usertype was not Subscriber:
+
+```json
+{ "pop": { "$lt": 1000 } }
+```
+
+```shell
+db.trips.find({ "tripduration": { "$lte" : 70 },
+                "usertype": { "$ne": "Subscriber" } }).pretty()
+```
+
+Find all documents where the tripduration was less than or equal to 70 seconds and the usertype was Customer using a redundant equality operator:
+
+```shell
+db.trips.find({ "tripduration": { "$lte" : 70 },
+                "usertype": { "$eq": "Customer" }}).pretty()
+```
+
+Find all documents where the tripduration was less than or equal to 70 seconds and the usertype was Customer using the implicit equality operator:
+
+```shell
+db.trips.find({ "tripduration": { "$lte" : 70 },
+                "usertype": "Customer" }).pretty()
+```
+
+```shell
+db.zips.find({"pop":{"$lt": 1000}}).count()
+```
+
+What is the difference between the number of people born in 1998 and the number of people born after 1998 in the sample_training.trips collection?
+
+```shell
+db.trips.find({"birth year": {"$eq": 1998}}).count()
+```
+
+// 12
+
+```shell
+db.trips.find({"birth year": {"$gt": 1998}}).count()
+```
+
+// 18  
+18 - 12 = 6
+
+A. 6
+
+Using the sample_training.routes collection find out which of the following statements will return all routes that have at least one stop in them?
+
+```shell
+db.routes.find({"stops": {"$gte": 0}}).pretty()
+db.routes.find({"stops": {"$ne": 0}}).pretty()
+db.routes.find({"stops": {"$lt": 0}}).pretty()
+db.routes.find({"stops": {"$gt": 0}}).pretty()
+
+```
+
+// No  
+// Yes  
+// No  
+// Yes
+
+## Query Operators - Logic
+
+`$and` Match all of the specified query clauses  
+`$or` At least one of the query clauses is matched
+`$nor` Fail to match both given clauses
+`$not` Negates the query requirements. returns all documents which do not match
+
+```shell
+db.routes.find({ "$and": [ { "$or" :[ { "dst_airport": "KZN" },
+                                    { "src_airport": "KZN" }
+                                  ] },
+                          { "$or" :[ { "airplane": "CR2" },
+                                     { "airplane": "A81" } ] }
+                         ]}).pretty()
+```
+
+Implicit $and  
+Find which student ids are > 25 and < 100 in the collection
+
+```json
+{ "$and": [{ "student_id": { "$gt": 25 } }, { "student_id": { "$lt": 100 } }] }
+```
+
+Better
+
+```json
+{ "student_id": { "$gt": 25, "$lt": 100 } }
+```
+
+When you need to include the same operator more than once in a query is when to use and
+
+Using the routes collection find out how many CR2 an A81 airplanes come through the KZN airport
+
+```JSON
+{"$or": [{"dst_airport": "KZN"}, {"src_airport": "KZN"}]}
+```
+
+and
+
+```JSON
+{"$or": [{"airplane": "CR2"}, {"airplane": "A81"}]}
+```
+
+Would give incorrect results, some could have correct airport but incorrect plane  
+To fix we can use the and and place the or operators inside its array.  
+Basically use the and operator when you need to use the same operator more than once in a query
+
+```JSON
+{
+  "$and":[
+    {
+      "$or":[
+        {
+          "dst_airport":"KZN"
+        },
+        {
+          "src_airport":"KZN"
+        }
+      ]
+    },
+    {
+      "$or":[
+        {
+          "airplane":"CR2"
+        },
+        {
+          "airplane":"A81"
+        }
+      ]
+    }
+  ]
+}
+
+```
+
+How many businesses in the sample_training.inspections dataset have the inspection result "Out of Business" and belong to the "Home Improvement Contractor - 100" sector?
+
+```shell
+db.inspections.find({"result": "Out of Business", "sector": "Home Improvement Contractor - 100"}).count()
+```
+
+// A. 4
+
+Which is the most succinct query to return all documents from the sample_training.inspections collection where the inspection date is either "Feb 20 2015", or "Feb 21 2015" and the company is not part of the "Cigarette Retail Dealer - 127" sector?
+
+```shell
+db.inspections.find(
+  { "$or": [ { "date": "Feb 20 2015" },
+             { "date": "Feb 21 2015" } ],
+    "sector": { "$ne": "Cigarette Retail Dealer - 127" }}).pretty()
+```
+
+How many zips in the sample_training.zips dataset are neither over-populated nor under-populated?
+
+In this case, we consider population of more than 1,000,000 to be over- populated and less than 5,000 to be under-populated.
